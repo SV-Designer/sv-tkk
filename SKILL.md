@@ -48,7 +48,7 @@ chmod 600 ~/.config/sv-tkk/env
 
 | # | 時機 | 做法 |
 |---|---|---|
-| G1 | Figma 套完 | 開 Figma 桌機版到新 page，提示：「請核對封面裁切與歌名／藝人，確認無誤打 OK 就跑輸出」⛔ 無條件停 |
+| G1 | Figma 套完 | 開 Figma 桌機版到新 page，提示語見步驟 7 ⛔ 無條件停 |
 
 其他步驟遇到下列狀況才停：找到多封未處理的信（問做哪封）、素材下載不到、信裡寫「QR Code 要換」、Notion 已有同名卡（不重開，直接沿用）。
 
@@ -177,8 +177,11 @@ for (const [name, val] of [['song', '<song>'], ['artist', '<artist>']]) {
 ```bash
 open "figma://file/$FIGMA_FILE_KEY?node-id=<np id 把 : 換成 ->"
 ```
-同時附一張 `get_screenshot` 給使用者先看。提示語：
-> 「請核對封面裁切與歌名／藝人，確認無誤打 OK 就跑輸出」
+同時附一張 `get_screenshot` 給使用者先看。提示語（回覆第一行起）：
+> **下一步**：
+> 1. 請核對封面裁切與歌名／藝人，確認無誤打 OK 就跑輸出
+
+使用者在 Figma 手動調過（例：封面裁切）沒關係，輸出時讀的是當下畫面。
 
 ### 8. 輸出（收到 OK 才做）
 `OUT="$OUTPUT_DIR/$D-<artist>"`；已存在 → ⛔ 停下問（不覆蓋）。
@@ -195,17 +198,19 @@ for (const f of p2.children.filter(n => n.type === 'FRAME')) {
 return tmp;
 ```
 2. 每個原 frame 各 `get_screenshot(nodeId, maxDimension=長邊, contentsOnly=true)`；每個 `_tmp2x_` 各 `get_screenshot(maxDimension=2x 長邊)`。可平行呼叫。
-3. 把網址寫成 TSV（`url⇥frame名⇥1或2`，frame 名用**原名**不帶 `_tmp2x_`），**拿到就立刻跑**（網址短效、視同機密，跑完刪 TSV）：
+3. 把網址寫成 TSV（`url⇥frame名⇥1或2`，frame 名用**原名**不帶 `_tmp2x_`），**TSV 放 session scratchpad（沒有就 `/tmp`），不放工作夾或輸出夾**；**拿到就立刻跑**（網址短效、視同機密，跑完刪 TSV）：
 ```bash
-bash <本 skill 資料夾>/scripts/export_tkk.sh "$OUT" "<tsv>"
+bash "${CLAUDE_SKILL_DIR}/scripts/export_tkk.sh" "$OUT" "<tsv>"
 ```
 退出碼 0＝全合格；2＝有不合格（已自動刪），重取該張截圖再跑。
 4. **刪掉暫存放大版**（所有 `_tmp2x_` 開頭節點）並回傳刪除數。🚫 不要留在使用者的檔案裡。
 
 ### 9. 收尾
 - `open "$OUT"`；TSV 刪掉。
-- 最後回覆一行：`完稿已存：<$OUT 絕對路徑>`
-- 只有出錯（張數不對、驗尺寸失敗、暫存版沒刪乾淨）才另外說明。
+- **交件前派一個沒看過製作過程的驗收 subagent**（有 `verifier` 就用它），附：信裡的尺寸清單原文、artist／song、`$OUT` 絕對路徑、Figma 回傳的暫存版刪除數；驗收標準：每個尺寸各有 1x 與 2x、像素與檔名尺寸吻合（2x＝兩倍）、資料夾名＝`$D-<artist>`、暫存版已刪乾淨。沒過就修完再交。
+- **最後回覆固定只有這一行**：
+  > **剛剛**：完稿已存：`<$OUT 絕對路徑>`
+- 只有出錯（張數不對、驗尺寸失敗、暫存版沒刪乾淨、驗收沒過）才在這行之外另外說明。
 
 ---
 
